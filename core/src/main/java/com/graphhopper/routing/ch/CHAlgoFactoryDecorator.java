@@ -44,9 +44,14 @@ import org.slf4j.LoggerFactory;
 public class CHAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator
 {
     /**
-     * property name in HintsMap if CH routing should be ignored
+     * The property name in HintsMap if CH routing should be ignored.
      */
     public static final String FORCE_FLEXIBLE_ROUTING = "routing.flexibleMode.force";
+    /**
+     * The property name in HintsMap if heading should be used for CH regardless of the possible
+     * routing errors.
+     */
+    public static final String FORCE_HEADING = "force_heading_ch";
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final List<PrepareContractionHierarchies> preparations = new ArrayList<>();
@@ -168,13 +173,13 @@ public class CHAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator
      * This method specifies if although the CH preparation is enabled a 'more expensive' flexible
      * request can be made via routing hints.
      */
-    public CHAlgoFactoryDecorator setForcingFlexibleModeAllowed( boolean forcingFlexibleModeAllowed )
+    public final CHAlgoFactoryDecorator setForcingFlexibleModeAllowed( boolean forcingFlexibleModeAllowed )
     {
         this.forcingFlexibleModeAllowed = forcingFlexibleModeAllowed;
         return this;
     }
 
-    public boolean isForcingFlexibleModeAllowed()
+    public final boolean isForcingFlexibleModeAllowed()
     {
         return forcingFlexibleModeAllowed;
     }
@@ -209,12 +214,12 @@ public class CHAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator
         return this;
     }
 
-    public boolean hasWeightings()
+    public final boolean hasWeightings()
     {
         return !weightings.isEmpty();
     }
 
-    public List<Weighting> getWeightings()
+    public final List<Weighting> getWeightings()
     {
         return weightings;
     }
@@ -277,7 +282,7 @@ public class CHAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator
                 return p;
         }
 
-        throw new IllegalStateException("Cannot find RoutingAlgorithFactory for weighting map " + map);
+        throw new IllegalStateException("Cannot find RoutingAlgorithmFactory for weighting map " + map);
     }
 
     /**
@@ -341,8 +346,10 @@ public class CHAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator
 
     public void createPreparations( GraphHopperStorage ghStorage, TraversalMode traversalMode )
     {
-        if (!preparations.isEmpty())
+        if (!isEnabled() || !preparations.isEmpty())
             return;
+        if (weightings.isEmpty())
+            throw new IllegalStateException("No CH weightings found");
 
         for (Weighting weighting : getWeightings())
         {
@@ -356,8 +363,5 @@ public class CHAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator
 
             addPreparation(tmpPrepareCH);
         }
-
-        if (getPreparations().isEmpty())
-            throw new IllegalStateException("No CH weightings found");
     }
 }

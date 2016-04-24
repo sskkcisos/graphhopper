@@ -69,7 +69,7 @@ public class GraphHopper implements GraphHopperAPI
     // for routing
     private boolean simplifyResponse = true;
     private TraversalMode traversalMode = TraversalMode.NODE_BASED;
-    private final List<RoutingAlgorithmFactoryDecorator> algoDecorators = new ArrayList<RoutingAlgorithmFactoryDecorator>();
+    private final List<RoutingAlgorithmFactoryDecorator> algoDecorators = new ArrayList<>();
     private int maxVisitedNodes = Integer.MAX_VALUE;
     // for index
     private LocationIndex locationIndex;
@@ -91,6 +91,7 @@ public class GraphHopper implements GraphHopperAPI
 
     public GraphHopper()
     {
+        setCHEnabled(true);
     }
 
     /**
@@ -339,21 +340,32 @@ public class GraphHopper implements GraphHopperAPI
     }
 
     /**
-     * Enables or disables contraction hierarchies (CH). This speed-up mode is enabled by default.
      *
-     * @deprecated Use getCHFactoryDecorator().setEnabled() instead. Will be removed in 0.8.
+     * @deprecated Use setEnabled() instead. Will be removed in 0.8.
      */
     public GraphHopper setCHEnable( boolean enable )
     {
+        return setCHEnabled(enable);
+    }
+
+    /**
+     * Enables or disables contraction hierarchies (CH). This speed-up mode is enabled by default.
+     */
+    public GraphHopper setCHEnabled( boolean enable )
+    {
         ensureNotLoaded();
+        if (enable)
+        {
+            if (!algoDecorators.contains(chFactoryDecorator))
+                algoDecorators.add(chFactoryDecorator);
+        } else
+            algoDecorators.remove(chFactoryDecorator);
+
         chFactoryDecorator.setEnabled(enable);
         return this;
     }
 
-    /**
-     * @deprecated Use getCHFactoryDecorator().isEnabled() instead. Will be removed in 0.8.
-     */
-    public boolean isCHEnabled()
+    public final boolean isCHEnabled()
     {
         return chFactoryDecorator.isEnabled();
     }
@@ -873,9 +885,6 @@ public class GraphHopper implements GraphHopperAPI
      */
     protected void createCHPreparations()
     {
-        if (algoDecorators.isEmpty())
-            algoDecorators.add(chFactoryDecorator);
-
         chFactoryDecorator.createPreparations(ghStorage, traversalMode);
     }
 
@@ -1019,7 +1028,7 @@ public class GraphHopper implements GraphHopperAPI
 
         if (chFactoryDecorator.isEnabled() && !forceFlexibleMode)
         {
-            boolean forceCHHeading = request.getHints().getBool("force_heading_ch", false);
+            boolean forceCHHeading = request.getHints().getBool(CHAlgoFactoryDecorator.FORCE_HEADING, false);
             if (!forceCHHeading && request.hasFavoredHeading(0))
                 throw new IllegalStateException("Heading is not (fully) supported for CHGraph. See issue #483");
 
