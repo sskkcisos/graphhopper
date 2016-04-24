@@ -39,8 +39,6 @@ import java.io.File;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Easy to use access point to configure import and (offline) routing.
@@ -69,7 +67,7 @@ public class GraphHopper implements GraphHopperAPI
     // for routing
     private boolean simplifyResponse = true;
     private TraversalMode traversalMode = TraversalMode.NODE_BASED;
-    private final List<RoutingAlgorithmFactoryDecorator> algoDecorators = new ArrayList<>();
+    private final Set<RoutingAlgorithmFactoryDecorator> algoDecorators = new LinkedHashSet<>();
     private int maxVisitedNodes = Integer.MAX_VALUE;
     // for index
     private LocationIndex locationIndex;
@@ -355,10 +353,8 @@ public class GraphHopper implements GraphHopperAPI
     {
         ensureNotLoaded();
         if (enable)
-        {
-            if (!algoDecorators.contains(chFactoryDecorator))
-                algoDecorators.add(chFactoryDecorator);
-        } else
+            algoDecorators.add(chFactoryDecorator);
+        else
             algoDecorators.remove(chFactoryDecorator);
 
         chFactoryDecorator.setEnabled(enable);
@@ -856,7 +852,9 @@ public class GraphHopper implements GraphHopperAPI
 
     public GraphHopper addAlgorithmFactoryDecorator( RoutingAlgorithmFactoryDecorator algoFactoryDecorator )
     {
-        algoDecorators.add(algoFactoryDecorator);
+        if (!algoDecorators.add(algoFactoryDecorator))
+            throw new IllegalArgumentException("Decorator was already added " + algoFactoryDecorator.getClass());
+
         return this;
     }
 
