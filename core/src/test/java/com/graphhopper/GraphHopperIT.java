@@ -65,8 +65,7 @@ public class GraphHopperIT
 
         hopper = new GraphHopper().
                 setStoreOnFlush(true).
-                setOSMFile(osmFile).
-                setCHEnable(false).
+                setOSMFile(osmFile).setCHEnabled(false).
                 setGraphHopperLocation(graphFileFoot).
                 setEncodingManager(new EncodingManager(importVehicles)).
                 importOrLoad();
@@ -151,8 +150,7 @@ public class GraphHopperIT
     public void testAlternativeRoutesBikeAndCar()
     {
         GraphHopper tmpHopper = new GraphHopper().
-                setOSMFile("files/north-bayreuth.osm.gz").
-                setCHEnable(false).
+                setOSMFile("files/north-bayreuth.osm.gz").setCHEnabled(false).
                 setGraphHopperLocation(tmpGraphFile).
                 setEncodingManager(new EncodingManager("bike, car"));
         tmpHopper.importOrLoad();
@@ -319,8 +317,7 @@ public class GraphHopperIT
     {
         GraphHopper tmpHopper = new GraphHopper().
                 setStoreOnFlush(true).
-                setOSMFile(osmFile).
-                setCHEnable(false).
+                setOSMFile(osmFile).setCHEnabled(false).
                 setGraphHopperLocation(tmpGraphFile).
                 setEncodingManager(new EncodingManager(importVehicles));
 
@@ -379,8 +376,7 @@ public class GraphHopperIT
 
         GraphHopper tmpHopper = new GraphHopper().
                 setStoreOnFlush(true).
-                setOSMFile(tmpOsmFile).
-                setCHEnable(false).
+                setOSMFile(tmpOsmFile).setCHEnabled(false).
                 setGraphHopperLocation(tmpGraphFile).
                 setEncodingManager(new EncodingManager(tmpImportVehicles)).
                 importOrLoad();
