@@ -812,7 +812,7 @@ public class GraphHopperTest
         instance.addAlgorithmFactoryDecorator(new RoutingAlgorithmFactoryDecorator()
         {
             @Override
-            public RoutingAlgorithmFactory decorate( RoutingAlgorithmFactory algoFactory, HintsMap map )
+            public RoutingAlgorithmFactory getDecoratedAlgorithmFactory( RoutingAlgorithmFactory algoFactory, HintsMap map )
             {
                 return af;
             }
@@ -826,7 +826,7 @@ public class GraphHopperTest
         instance.addAlgorithmFactoryDecorator(new RoutingAlgorithmFactoryDecorator()
         {
             @Override
-            public RoutingAlgorithmFactory decorate( RoutingAlgorithmFactory algoFactory, HintsMap map )
+            public RoutingAlgorithmFactory getDecoratedAlgorithmFactory( RoutingAlgorithmFactory algoFactory, HintsMap map )
             {
                 return new RoutingAlgorithmFactorySimple()
                 {
@@ -925,9 +925,9 @@ public class GraphHopperTest
 
         HintsMap wMap = new HintsMap("fastest");
         wMap.put("vehicle", "truck");
-        assertEquals("fastest|truck", ((PrepareContractionHierarchies) decorator.decorate(null, wMap)).getWeighting().toString());
+        assertEquals("fastest|truck", ((PrepareContractionHierarchies) decorator.getDecoratedAlgorithmFactory(null, wMap)).getWeighting().toString());
         wMap.put("vehicle", "simple_truck");
-        assertEquals("fastest|simple_truck", ((PrepareContractionHierarchies) decorator.decorate(null, wMap)).getWeighting().toString());
+        assertEquals("fastest|simple_truck", ((PrepareContractionHierarchies) decorator.getDecoratedAlgorithmFactory(null, wMap)).getWeighting().toString());
 
         // make sure weighting cannot be mixed
         decorator.addWeighting(fwT);

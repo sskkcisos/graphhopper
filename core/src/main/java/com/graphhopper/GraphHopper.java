@@ -761,7 +761,7 @@ public class GraphHopper implements GraphHopperAPI
         return initializeStorage(graphHopperFolder);
     }
 
-    private boolean initializeStorage(String graphHopperFolder)
+    private boolean initializeStorage( String graphHopperFolder )
     {
         if (Helper.isEmpty(graphHopperFolder))
             throw new IllegalStateException("graphHopperLocation is not specified. call init before");
@@ -846,13 +846,13 @@ public class GraphHopper implements GraphHopperAPI
 
     public RoutingAlgorithmFactory getAlgorithmFactory( HintsMap map )
     {
-        RoutingAlgorithmFactory pickedRAFactory = new RoutingAlgorithmFactorySimple();
+        RoutingAlgorithmFactory routingAlgorithmFactory = new RoutingAlgorithmFactorySimple();
         for (RoutingAlgorithmFactoryDecorator decorator : algoDecorators)
         {
-            pickedRAFactory = decorator.decorate(pickedRAFactory, map);
+            routingAlgorithmFactory = decorator.getDecoratedAlgorithmFactory(routingAlgorithmFactory, map);
         }
 
-        return pickedRAFactory;
+        return routingAlgorithmFactory;
     }
 
     public GraphHopper addAlgorithmFactoryDecorator( RoutingAlgorithmFactoryDecorator algoFactoryDecorator )
@@ -991,7 +991,7 @@ public class GraphHopper implements GraphHopperAPI
             vehicle = getDefaultVehicle().toString();
             request.setVehicle(vehicle);
         }
-        
+
         if (request.getWeighting().isEmpty())
             request.setWeighting(chFactoryDecorator.getDefaultWeighting());
 
