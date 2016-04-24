@@ -71,7 +71,6 @@ public class GraphHopper implements GraphHopperAPI
     private TraversalMode traversalMode = TraversalMode.NODE_BASED;
     private final List<RoutingAlgorithmFactoryDecorator> algoDecorators = new ArrayList<RoutingAlgorithmFactoryDecorator>();
     private int maxVisitedNodes = Integer.MAX_VALUE;
-    private boolean forcingFlexibleModeAllowed = false;
     // for index
     private LocationIndex locationIndex;
     private int preciseIndexResolution = 300;
@@ -278,16 +277,6 @@ public class GraphHopper implements GraphHopperAPI
     {
         ensureNotLoaded();
         dataAccessType = DAType.UNSAFE_STORE;
-        return this;
-    }
-
-    /**
-     * This method specifies if although the CH preparation is enabled a 'more expensive' flexible
-     * request can be made.
-     */
-    public GraphHopper setFlexibleModeAllowed( boolean t )
-    {
-        forcingFlexibleModeAllowed = t;
         return this;
     }
 
@@ -625,8 +614,6 @@ public class GraphHopper implements GraphHopperAPI
 
         // prepare CH
         chFactoryDecorator.init(args);
-        if (!chFactoryDecorator.getWeightingsAsStrings().isEmpty())
-            setFlexibleModeAllowed(args.getBool("routing.flexibleMode.allowed", false));
 
         // osm import
         osmReaderWayPointMaxDistance = args.getDouble("osmreader.wayPointMaxDistance", osmReaderWayPointMaxDistance);
@@ -861,7 +848,7 @@ public class GraphHopper implements GraphHopperAPI
         return this;
     }
 
-    public CHAlgoFactoryDecorator getCHFactoryDecorator()
+    public final CHAlgoFactoryDecorator getCHFactoryDecorator()
     {
         return chFactoryDecorator;
     }
@@ -992,9 +979,6 @@ public class GraphHopper implements GraphHopperAPI
             request.setVehicle(vehicle);
         }
 
-        if (request.getWeighting().isEmpty())
-            request.setWeighting(chFactoryDecorator.getDefaultWeighting());
-
         if (!encodingManager.supports(vehicle))
         {
             ghRsp.addError(new IllegalArgumentException("Vehicle " + vehicle + " unsupported. "
@@ -1026,8 +1010,8 @@ public class GraphHopper implements GraphHopperAPI
         Weighting weighting;
         Graph routingGraph = ghStorage;
 
-        boolean forceFlexibleMode = request.getHints().getBool("routing.flexibleMode.force", false);
-        if (!forcingFlexibleModeAllowed && forceFlexibleMode)
+        boolean forceFlexibleMode = request.getHints().getBool(CHAlgoFactoryDecorator.FORCE_FLEXIBLE_ROUTING, false);
+        if (!chFactoryDecorator.isForcingFlexibleModeAllowed() && forceFlexibleMode)
         {
             ghRsp.addError(new IllegalStateException("Flexible mode not enabled on the server-side"));
             return Collections.emptyList();

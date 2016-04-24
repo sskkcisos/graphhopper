@@ -43,12 +43,19 @@ import org.slf4j.LoggerFactory;
  */
 public class CHAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator
 {
-    private final Logger logger = LoggerFactory.getLogger(getClass());
-    private final List<PrepareContractionHierarchies> preparations = new ArrayList<PrepareContractionHierarchies>();
-    private final List<Weighting> weightings = new ArrayList<Weighting>();
-    private final List<String> weightingsAsStrings = new ArrayList<String>();
+    /**
+     * property name in HintsMap if CH routing should be ignored
+     */
+    public static final String FORCE_FLEXIBLE_ROUTING = "routing.flexibleMode.force";
 
+    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final List<PrepareContractionHierarchies> preparations = new ArrayList<>();
+    // we need to decouple weighting objects from the weighting list of strings 
+    // as we need the strings to create the GraphHopperStorage and the GraphHopperStorage to create the preparations from the Weighting objects currently requiring the encoders
+    private final List<Weighting> weightings = new ArrayList<>();
+    private final List<String> weightingsAsStrings = new ArrayList<>();
     // for backward compatibility enable CH by default.
+    private boolean forcingFlexibleModeAllowed = false;
     private boolean enabled = true;
     private int preparationThreads;
     private ExecutorService chPreparePool;
@@ -78,6 +85,9 @@ public class CHAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator
             List<String> tmpCHWeightingList = Arrays.asList(chWeightingsStr.split(","));
             setWeightingsAsStrings(tmpCHWeightingList);
         }
+
+        if (!getWeightingsAsStrings().isEmpty())
+            setForcingFlexibleModeAllowed(args.getBool("routing.flexibleMode.allowed", isForcingFlexibleModeAllowed()));
 
         setPreparationPeriodicUpdates(args.getInt("prepare.updates.periodic", getPreparationPeriodicUpdates()));
         setPreparationLazyUpdates(args.getInt("prepare.updates.lazy", getPreparationLazyUpdates()));
@@ -144,14 +154,29 @@ public class CHAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator
     /**
      * Enables or disables contraction hierarchies (CH). This speed-up mode is enabled by default.
      */
-    public void setEnabled( boolean enabled )
+    public final void setEnabled( boolean enabled )
     {
         this.enabled = enabled;
     }
 
-    public boolean isEnabled()
+    public final boolean isEnabled()
     {
         return enabled;
+    }
+
+    /**
+     * This method specifies if although the CH preparation is enabled a 'more expensive' flexible
+     * request can be made via routing hints.
+     */
+    public CHAlgoFactoryDecorator setForcingFlexibleModeAllowed( boolean forcingFlexibleModeAllowed )
+    {
+        this.forcingFlexibleModeAllowed = forcingFlexibleModeAllowed;
+        return this;
+    }
+
+    public boolean isForcingFlexibleModeAllowed()
+    {
+        return forcingFlexibleModeAllowed;
     }
 
     /**
@@ -189,11 +214,6 @@ public class CHAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator
         return !weightings.isEmpty();
     }
 
-    public boolean hasPreparations()
-    {
-        return !preparations.isEmpty();
-    }
-
     public List<Weighting> getWeightings()
     {
         return weightings;
@@ -228,7 +248,7 @@ public class CHAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator
         return this.weightingsAsStrings;
     }
 
-    public String getDefaultWeighting()
+    private String getDefaultWeighting()
     {
         return weightingsAsStrings.isEmpty() ? "fastest" : weightingsAsStrings.get(0);
     }
@@ -241,12 +261,15 @@ public class CHAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator
     @Override
     public RoutingAlgorithmFactory getDecoratedAlgorithmFactory( RoutingAlgorithmFactory defaultAlgoFactory, HintsMap map )
     {
-        boolean forceFlexMode = map.getBool("routing.flexibleMode.force", false);
+        boolean forceFlexMode = map.getBool(FORCE_FLEXIBLE_ROUTING, false);
         if (forceFlexMode)
             return defaultAlgoFactory;
 
         if (preparations.isEmpty())
             throw new IllegalStateException("No preparations added to this decorator");
+
+        if (map.getWeighting().isEmpty())
+            map.setWeighting(getDefaultWeighting());
 
         for (PrepareContractionHierarchies p : preparations)
         {
@@ -318,7 +341,7 @@ public class CHAlgoFactoryDecorator implements RoutingAlgorithmFactoryDecorator
 
     public void createPreparations( GraphHopperStorage ghStorage, TraversalMode traversalMode )
     {
-        if (hasPreparations())
+        if (!preparations.isEmpty())
             return;
 
         for (Weighting weighting : getWeightings())
