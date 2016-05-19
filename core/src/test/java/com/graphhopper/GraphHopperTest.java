@@ -345,7 +345,7 @@ public class GraphHopperTest
         assertEquals(8, instance.getGraphHopperStorage().getAllEdges().getMaxId());
 
         // A to D
-        GHResponse grsp = instance.route(new GHRequest(11.1, 50, 11.3, 51).setVehicle(EncodingManager.CAR));
+        GHResponse grsp = instance.route(new GHRequest(11.1, 50, 11.3, 51).setVehicle("car"));
         assertFalse(grsp.hasErrors());
         PathWrapper rsp = grsp.getBest();
         assertEquals(3, rsp.getPoints().getSize());
@@ -356,7 +356,7 @@ public class GraphHopperTest
         assertEquals(11.3, rsp.getPoints().getLatitude(2), 1e-3);
 
         // A to D not allowed for foot. But the location index will choose a node close to D accessible to FOOT        
-        grsp = instance.route(new GHRequest(11.1, 50, 11.3, 51).setVehicle(EncodingManager.FOOT));
+        grsp = instance.route(new GHRequest(11.1, 50, 11.3, 51).setVehicle("foot"));
         assertFalse(grsp.hasErrors());
         rsp = grsp.getBest();
         assertEquals(2, rsp.getPoints().getSize());
@@ -365,13 +365,13 @@ public class GraphHopperTest
         assertEquals(50.644, rsp.getPoints().getLongitude(1), 1e-3);
 
         // A to E only for foot
-        grsp = instance.route(new GHRequest(11.1, 50, 10, 51).setVehicle(EncodingManager.FOOT));
+        grsp = instance.route(new GHRequest(11.1, 50, 10, 51).setVehicle("foot"));
         assertFalse(grsp.hasErrors());
         rsp = grsp.getBest();
         assertEquals(2, rsp.getPoints().size());
 
         // A D E for car
-        grsp = instance.route(new GHRequest(11.1, 50, 10, 51).setVehicle(EncodingManager.CAR));
+        grsp = instance.route(new GHRequest(11.1, 50, 10, 51).setVehicle("car"));
         assertFalse(grsp.hasErrors());
         rsp = grsp.getBest();
         assertEquals(3, rsp.getPoints().getSize());
@@ -463,18 +463,12 @@ public class GraphHopperTest
     }
 
     @Test
-    public void testFailsAndDoesNotCreateEmptyFolderIfLoadingFromNonExistingPath()
+    public void testDoesNotCreateEmptyFolderIfLoadingFromNonExistingPath()
     {
         instance = new GraphHopper().
                 setEncodingManager(new EncodingManager("car"));
-        try
-        {
-            instance.load(ghLoc);
-            assertTrue(false);
-        } catch (IllegalStateException ex)
-        {
-            assertEquals("Path \"" + ghLoc + "\" does not exist", ex.getMessage());
-        }
+
+        assertFalse(instance.load(ghLoc));
         assertFalse(new File(ghLoc).exists());
     }
 
@@ -500,7 +494,7 @@ public class GraphHopperTest
             assertTrue(false);
         } catch (IllegalStateException ex)
         {
-            assertEquals("graphHopperLocation is not specified. call init before", ex.getMessage());
+            assertEquals("GraphHopperLocation is not specified. Call setGraphHopperLocation or init before", ex.getMessage());
         }
 
         // missing OSM file to import
@@ -562,7 +556,7 @@ public class GraphHopperTest
         assertEquals(2, instance.getGraphHopperStorage().getAllEdges().getMaxId());
 
         // A to E only for foot
-        GHResponse grsp = instance.route(new GHRequest(11.1, 50, 11.2, 52.01).setVehicle(EncodingManager.FOOT));
+        GHResponse grsp = instance.route(new GHRequest(11.1, 50, 11.2, 52.01).setVehicle("foot"));
         assertFalse(grsp.hasErrors());
         PathWrapper rsp = grsp.getBest();
         assertEquals(Helper.createPointList(11.1, 50, 10, 51, 11.2, 52), rsp.getPoints());

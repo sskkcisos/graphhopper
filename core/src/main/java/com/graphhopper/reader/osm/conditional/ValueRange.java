@@ -15,16 +15,18 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.graphhopper.storage;
+package com.graphhopper.reader.osm.conditional;
 
 /**
+ *
  * @author Peter Karich
  */
-public class RAMDirectoryTest extends AbstractDirectoryTester
+public interface ValueRange<T>
 {
-    @Override
-    Directory createDir()
-    {
-        return new RAMDirectory(location, true).create();
-    }
+    /**
+     * Checks if the value is in range of this ValueRange check method.
+     */
+    boolean isInRange( T value );
+
+    String getKey();
 }

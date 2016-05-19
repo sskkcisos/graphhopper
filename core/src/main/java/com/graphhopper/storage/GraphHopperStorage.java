@@ -39,7 +39,7 @@ import java.util.List;
 public final class GraphHopperStorage implements GraphStorage, Graph
 {
     private final Directory dir;
-    private EncodingManager encodingManager;
+    private final EncodingManager encodingManager;
     private final StorableProperties properties;
     private final BaseGraph baseGraph;
     // same flush order etc
@@ -55,6 +55,9 @@ public final class GraphHopperStorage implements GraphStorage, Graph
     {
         if (extendedStorage == null)
             throw new IllegalArgumentException("GraphExtension cannot be null, use NoOpExtension");
+
+        if (encodingManager == null)
+            throw new IllegalArgumentException("EncodingManager needs to be non-null since 0.7. Create one using new EncodingManager or EncodingManager.create(flagEncoderFactory, ghLocation)");
 
         this.encodingManager = encodingManager;
         this.dir = dir;
@@ -171,6 +174,7 @@ public final class GraphHopperStorage implements GraphStorage, Graph
         if (encodingManager == null)
             throw new IllegalStateException("EncodingManager can only be null if you call loadExisting");
 
+        dir.create();
         long initSize = Math.max(byteCount, 100);
         properties.create(100);
 
@@ -247,22 +251,12 @@ public final class GraphHopperStorage implements GraphStorage, Graph
         {
             properties.checkVersions(false);
             // check encoding for compatiblity
-            String acceptStr = properties.get("graph.flag_encoders");
+            String flagEncodersStr = properties.get("graph.flag_encoders");
 
-            if (encodingManager == null)
-            {
-                if (acceptStr.isEmpty())
-                    throw new IllegalStateException("No EncodingManager was configured. And no one was found in the graph: "
-                            + dir.getLocation());
-
-                int bytesForFlags = 4;
-                if ("8".equals(properties.get("graph.bytes_for_flags")))
-                    bytesForFlags = 8;
-                encodingManager = new EncodingManager(acceptStr, bytesForFlags);
-            } else if (!acceptStr.isEmpty() && !encodingManager.toDetailsString().equalsIgnoreCase(acceptStr))
+            if (!flagEncodersStr.isEmpty() && !encodingManager.toDetailsString().equalsIgnoreCase(flagEncodersStr))
             {
                 throw new IllegalStateException("Encoding does not match:\nGraphhopper config: " + encodingManager.toDetailsString()
-                        + "\nGraph: " + acceptStr + ", dir:" + dir.getLocation());
+                        + "\nGraph: " + flagEncodersStr + ", dir:" + dir.getLocation());
             }
 
             String byteOrder = properties.get("graph.byte_order");

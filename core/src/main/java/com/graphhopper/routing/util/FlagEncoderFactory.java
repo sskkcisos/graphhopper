@@ -15,16 +15,25 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.graphhopper.storage;
+package com.graphhopper.routing.util;
+
+import com.graphhopper.util.PMap;
 
 /**
+ *
  * @author Peter Karich
  */
-public class RAMDirectoryTest extends AbstractDirectoryTester
+public interface FlagEncoderFactory
 {
-    @Override
-    Directory createDir()
-    {
-        return new RAMDirectory(location, true).create();
-    }
+    final String CAR = "car";
+    final String BIKE = "bike";
+    final String BIKE2 = "bike2";
+    final String RACINGBIKE = "racingbike";
+    final String MOUNTAINBIKE = "mtb";
+    final String FOOT = "foot";
+    final String HIKE = "hike";
+    final String MOTORCYCLE = "motorcycle";
+    final FlagEncoderFactory DEFAULT = new DefaultFlagEncoderFactory();
+
+    FlagEncoder createFlagEncoder( String name, PMap configuration );
 }

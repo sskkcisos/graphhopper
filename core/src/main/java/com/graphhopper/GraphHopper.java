@@ -94,6 +94,7 @@ public class GraphHopper implements GraphHopperAPI
     // utils
     private final TranslationMap trMap = new TranslationMap().doImport();
     private ElevationProvider eleProvider = ElevationProvider.NOOP;
+    private FlagEncoderFactory flagEncoderFactory = FlagEncoderFactory.DEFAULT;
 
     public GraphHopper()
     {
@@ -571,6 +572,12 @@ public class GraphHopper implements GraphHopperAPI
         return trMap;
     }
 
+    public GraphHopper setFlagEncoderFactory( FlagEncoderFactory factory )
+    {
+        this.flagEncoderFactory = factory;
+        return this;
+    }
+
     /**
      * Reads configuration from a CmdArgs object. Which can be manually filled, or via main(String[]
      * args) ala CmdArgs.read(args) or via configuration file ala
@@ -602,9 +609,9 @@ public class GraphHopper implements GraphHopperAPI
         sortGraph = args.getBool("graph.do_sort", sortGraph);
         removeZipped = args.getBool("graph.remove_zipped", removeZipped);
         int bytesForFlags = args.getInt("graph.bytes_for_flags", 4);
-        String flagEncoders = args.get("graph.flag_encoders", "");
-        if (!flagEncoders.isEmpty())
-            setEncodingManager(new EncodingManager(flagEncoders, bytesForFlags));
+        String flagEncodersStr = args.get("graph.flag_encoders", "");
+        if (!flagEncodersStr.isEmpty())
+            setEncodingManager(new EncodingManager(flagEncoderFactory, flagEncodersStr, bytesForFlags));
 
         if (args.get("graph.locktype", "native").equals("simple"))
             lockFactory = new SimpleFSLockFactory();
@@ -685,7 +692,7 @@ public class GraphHopper implements GraphHopperAPI
      */
     public GraphHopper importOrLoad()
     {
-        if (!initializeStorage(ghLocation))
+        if (!load(ghLocation))
         {
             printInfo();
             process(ghLocation);
@@ -775,22 +782,14 @@ public class GraphHopper implements GraphHopperAPI
     /**
      * Opens existing graph.
      *
-     * @param graphHopperFolder is the folder containing graphhopper files (which can be compressed
-     * too)
+     * @param graphHopperFolder is the folder containing graphhopper files. Can be a compressed file
+     * too ala folder-content.ghz.
      */
     @Override
     public boolean load( String graphHopperFolder )
     {
-        if (!(new File(graphHopperFolder).exists()))
-            throw new IllegalStateException("Path \"" + graphHopperFolder + "\" does not exist");
-
-        return initializeStorage(graphHopperFolder);
-    }
-
-    private boolean initializeStorage( String graphHopperFolder )
-    {
         if (Helper.isEmpty(graphHopperFolder))
-            throw new IllegalStateException("graphHopperLocation is not specified. call init before");
+            throw new IllegalStateException("GraphHopperLocation is not specified. Call setGraphHopperLocation or init before");
 
         if (fullyLoaded)
             throw new IllegalStateException("graph is already successfully loaded");
@@ -800,7 +799,7 @@ public class GraphHopper implements GraphHopperAPI
             // do nothing  
         } else if (graphHopperFolder.endsWith(".osm") || graphHopperFolder.endsWith(".xml"))
         {
-            throw new IllegalArgumentException("To import an osm file you need to use importOrLoad");
+            throw new IllegalArgumentException("GraphHopperLocation cannot be the OSM file. Instead you need to use importOrLoad");
         } else if (!graphHopperFolder.contains("."))
         {
             if (new File(graphHopperFolder + "-gh").exists())
@@ -824,7 +823,7 @@ public class GraphHopper implements GraphHopperAPI
         setGraphHopperLocation(graphHopperFolder);
 
         if (encodingManager == null)
-            setEncodingManager(EncodingManager.create(ghLocation));
+            setEncodingManager(EncodingManager.create(flagEncoderFactory, ghLocation));
 
         if (!allowWrites && dataAccessType.isMMap())
             dataAccessType = DAType.MMAP_RO;
@@ -843,6 +842,9 @@ public class GraphHopper implements GraphHopperAPI
         }
 
         ghStorage.setSegmentSize(defaultSegmentSize);
+
+        if (!new File(graphHopperFolder).exists())
+            return false;
 
         Lock lock = null;
         try
@@ -919,7 +921,7 @@ public class GraphHopper implements GraphHopperAPI
     }
 
     /**
-     * Sets EncodingManager, does the preparation and creates the locationIndex
+     * Does the preparation and creates the location index
      */
     protected void postProcessing()
     {
@@ -1047,13 +1049,14 @@ public class GraphHopper implements GraphHopperAPI
                 routingTemplate = new ViaRoutingTemplate(request, ghRsp, locationIndex);
 
             List<Path> altPaths = null;
+            List<QueryResult> qResults = null;
             int maxRetries = routingTemplate.getMaxRetries();
             Locale locale = request.getLocale();
             Translation tr = trMap.getWithFallBack(locale);
             for (int i = 0; i < maxRetries; i++)
             {
                 StopWatch sw = new StopWatch().start();
-                List<QueryResult> qResults = routingTemplate.lookup(points, encoder);
+                qResults = routingTemplate.lookup(points, encoder);
                 ghRsp.addDebugInfo("idLookup:" + sw.stop().getSeconds() + "s");
                 if (ghRsp.hasErrors())
                     return Collections.emptyList();
@@ -1111,6 +1114,12 @@ public class GraphHopper implements GraphHopperAPI
                     break;
             }
 
+            PointList pointList = new PointList(qResults.size(), true);
+            for (QueryResult qr : qResults)
+            {
+                pointList.add(qr.getSnappedPoint());
+            }
+            ghRsp.setPoints(pointList);
             return altPaths;
 
         } catch (IllegalArgumentException ex)
